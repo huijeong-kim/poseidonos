@@ -68,28 +68,12 @@ TEST(Stripe, GetVsid_TestSimpleGetter)
     stripe.GetVsid();
 }
 
-TEST(Stripe, SetVsid_TestSimpleSetter)
-{
-    // given
-    Stripe stripe(nullptr, false, 10);
-    // when
-    stripe.SetVsid(0);
-}
-
 TEST(Stripe, GetWbLsid_TestSimpleGetter)
 {
     // given
     Stripe stripe(nullptr, false, 10);
     // when
     stripe.GetWbLsid();
-}
-
-TEST(Stripe, SetWbLsid_TestSimpleSetter)
-{
-    // given
-    Stripe stripe(nullptr, false, 10);
-    // when
-    stripe.SetWbLsid(0);
 }
 
 TEST(Stripe, GetUserLsid_TestSimpleGetter)
@@ -181,31 +165,6 @@ TEST(Stripe, IsOkToFree_TestSimpleGetter)
     EXPECT_EQ(true, ret);
     // when 3.
     stripe.Derefer(5);
-}
-
-TEST(Stripe, AddDataBuffer_TestSimpleCaller)
-{
-    // given
-    Stripe stripe(nullptr, true, 10);
-    char buf[10];
-    // when
-    stripe.AddDataBuffer((void*)buf);
-}
-
-TEST(Stripe, DataBufferBegin_TestSimpleGetter)
-{
-    // given
-    Stripe stripe(nullptr, true, 10);
-    // when
-    DataBufferIter ret = stripe.DataBufferBegin();
-}
-
-TEST(Stripe, DataBufferEnd_TestSimpleGetter)
-{
-    // given
-    Stripe stripe(nullptr, true, 10);
-    // when
-    DataBufferIter ret = stripe.DataBufferEnd();
 }
 
 TEST(Stripe, UpdateReverseMapEntry_Test)

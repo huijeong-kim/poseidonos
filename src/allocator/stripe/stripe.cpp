@@ -45,7 +45,7 @@
 
 namespace pos
 {
-Stripe::Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, bool withDataBuffer_, uint32_t numBlksPerStripe)
+Stripe::Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, bool isUserStripe_, uint32_t numBlksPerStripe)
 : volumeId(UINT32_MAX),
   vsid(UINT32_MAX),
   wbLsid(UINT32_MAX),
@@ -55,21 +55,21 @@ Stripe::Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, bool withDataBuffer_
   remaining(0),
   referenceCount(0),
   totalBlksPerUserStripe(numBlksPerStripe), // for UT
-  withDataBuffer(withDataBuffer_),
+  isUserStripe(isUserStripe_),
   iReverseMap(revMapMan),
   activeFlush(false)
 {
     flushIo = nullptr;
 }
 
-Stripe::Stripe(IReverseMap* revMapMan, bool withDataBuffer_, uint32_t numBlksPerStripe)
-: Stripe(nullptr, revMapMan, withDataBuffer_, numBlksPerStripe)
+Stripe::Stripe(IReverseMap* revMapMan, bool isUserStripe_, uint32_t numBlksPerStripe)
+: Stripe(nullptr, revMapMan, isUserStripe_, numBlksPerStripe)
 {
 }
 // LCOV_EXCL_START
 Stripe::~Stripe(void)
 {
-    if (withDataBuffer == false)
+    if (isUserStripe == false)
     {
         if (revMapPack != nullptr)
         {
@@ -101,7 +101,7 @@ Stripe::GetVictimVsa(uint32_t offset)
 }
 
 bool
-Stripe::Assign(StripeId vsid_, StripeId wbLsid_, StripeId userLsid_, ASTailArrayIdx tailArrayIdx_)
+Stripe::Assign(StripeId vsid_, StripeId wbLsid_, StripeId userLsid_, uint32_t volumeId_)
 {
     if (vsid_ != userLsid_)
     {
@@ -113,12 +113,12 @@ Stripe::Assign(StripeId vsid_, StripeId wbLsid_, StripeId userLsid_, ASTailArray
     vsid = vsid_;
     wbLsid = wbLsid_;
     userLsid = userLsid_;
-    volumeId = tailArrayIdx_;
+    volumeId = volumeId_;
     oldVsaList.assign(totalBlksPerUserStripe, UNMAP_VSA);
     remaining.store(totalBlksPerUserStripe, memory_order_release);
     finished = false;
     activeFlush = false;
-    if (withDataBuffer == false)
+    if (isUserStripe == false)
     {
         revMapPack = iReverseMap->AllocReverseMapPack(vsid);
     }
@@ -162,12 +162,6 @@ Stripe::GetWbLsid(void)
     return wbLsid;
 }
 
-void
-Stripe::SetWbLsid(StripeId wbAreaLsid)
-{
-    wbLsid = wbAreaLsid;
-}
-
 StripeId
 Stripe::GetUserLsid(void)
 {
@@ -178,12 +172,6 @@ StripeId
 Stripe::GetVsid(void)
 {
     return vsid;
-}
-
-void
-Stripe::SetVsid(StripeId virtsid)
-{
-    vsid = virtsid;
 }
 
 uint32_t
@@ -212,27 +200,6 @@ int
 Stripe::Flush(EventSmartPtr callback)
 {
     return iReverseMap->Flush(revMapPack, wbLsid, this, vsid, callback);
-}
-
-DataBufferIter
-Stripe::DataBufferBegin(void)
-{
-    assert(withDataBuffer == true);
-    return dataBuffer.begin();
-}
-
-DataBufferIter
-Stripe::DataBufferEnd(void)
-{
-    assert(withDataBuffer == true);
-    return dataBuffer.end();
-}
-
-void
-Stripe::AddDataBuffer(void* buf)
-{
-    assert(withDataBuffer == true);
-    dataBuffer.push_back(buf);
 }
 
 uint32_t

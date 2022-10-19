@@ -12,6 +12,7 @@
 #include "test/unit-tests/include/i_array_device_mock.h"
 #include "test/unit-tests/mapper/i_stripemap_mock.h"
 #include "test/unit-tests/mapper/i_vsamap_mock.h"
+#include "src/volume/volume_base.h"
 
 using namespace pos;
 using namespace std;
