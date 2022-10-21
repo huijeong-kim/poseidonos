@@ -14,6 +14,7 @@
 
 using namespace std;
 using ::testing::_;
+using ::testing::Matcher;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
@@ -114,7 +115,7 @@ TEST(WriteCompletion, _RequestFlush_DummyStripe)
     VirtualBlkAddr startVsa;
     int arrayId = 0;
     ComponentsInfo info{&mockIArrayInfo, nullptr};
-    ON_CALL(rev, Flush).WillByDefault(Return(0));
+    ON_CALL(rev, Flush(Matcher<StripeId>(_), _)).WillByDefault(Return(0));
     ON_CALL(*mockVolIo, GetLsidEntry()).WillByDefault(ReturnRef(stripeAddr));
     ON_CALL(*mockVolIo, GetVsa()).WillByDefault(ReturnRef(startVsa));
     ON_CALL(mockIArrayMgmt, GetInfo(arrayId)).WillByDefault(Return(&info));

@@ -56,18 +56,19 @@ RevMapPageAsyncIoCtx::HandleIoComplete(void* data)
     delete this;
 }
 
-ReverseMapPack::ReverseMapPack(void)
+ReverseMapPack::ReverseMapPack(MetaFileIntf* file, uint32_t mpageSize_, uint32_t numMpagesPerStripe_, TelemetryPublisher* tp)
 : wbLsid(UNMAP_STRIPE),
   vsid(UINT32_MAX),
-  revMapfile(nullptr),
-  mpageSize(0),
+  fileOffset(UINT64_MAX),
+  revMapfile(file),
+  mpageSize(mpageSize_),
   mfsAsyncIoDonePages(0),
   mapFlushState(MapFlushState::FLUSH_DONE),
-  numMpagesPerStripe(0),
+  numMpagesPerStripe(numMpagesPerStripe_),
   ioError(0),
   ioDirection(0),
   callback(nullptr),
-  telemetryPublisher(nullptr),
+  telemetryPublisher(tp),
   issuedIoCnt(0)
 {
 }
@@ -90,35 +91,32 @@ ReverseMapPack::~ReverseMapPack(void)
 // LCOV_EXCL_STOP
 
 void
-ReverseMapPack::Init(MetaFileIntf* file, StripeId wbLsid_, StripeId vsid_, uint32_t mpageSize_, uint32_t numMpagesPerStripe_, TelemetryPublisher* tp)
+ReverseMapPack::Assign(StripeId wbLsid_, StripeId vsid_, uint64_t fileOffset_)
 {
-    mapFlushState = MapFlushState::FLUSH_DONE;
-    revMapfile = file;
+    assert(mapFlushState == MapFlushState::FLUSH_DONE);
+
     wbLsid = wbLsid_;
     vsid = vsid_;
-    mpageSize = mpageSize_;
-    numMpagesPerStripe = numMpagesPerStripe_;
-    telemetryPublisher = tp;
+    fileOffset = fileOffset_;
+    callback = nullptr;
+
+    _InitRevMaps();
+    _SetHeader(wbLsid, vsid);
+}
+
+void
+ReverseMapPack::_InitRevMaps(void)
+{
     for (uint64_t mpage = 0; mpage < numMpagesPerStripe; ++mpage)
     {
         RevMap* revMap = new RevMap();
         memset(revMap, 0xFF, mpageSize);
         revMaps.push_back(revMap);
     }
-    _SetHeader(wbLsid, vsid);
-}
-
-void
-ReverseMapPack::Assign(StripeId vsid_)
-{
-    assert(mapFlushState == MapFlushState::FLUSH_DONE);
-    vsid = vsid_;
-    _SetHeader(wbLsid, vsid);
-    callback = nullptr;
 }
 
 int
-ReverseMapPack::Load(uint64_t fileOffset, EventSmartPtr cb, uint32_t vsid)
+ReverseMapPack::Load(EventSmartPtr cb)
 {
     ioDirection = IO_LOAD;
     ioError = 0;
@@ -154,7 +152,7 @@ ReverseMapPack::Load(uint64_t fileOffset, EventSmartPtr cb, uint32_t vsid)
 }
 
 int
-ReverseMapPack::Flush(Stripe* stripe, uint64_t fileOffset, EventSmartPtr cb, uint32_t vsid)
+ReverseMapPack::Flush(EventSmartPtr cb)
 {
     ioDirection = IO_FLUSH;
     ioError = 0;
@@ -173,7 +171,6 @@ ReverseMapPack::Flush(Stripe* stripe, uint64_t fileOffset, EventSmartPtr cb, uin
         revMapPageAsyncIoReq->callback = std::bind(&ReverseMapPack::_RevMapPageIoDone,
             this, std::placeholders::_1);
         revMapPageAsyncIoReq->mpageNum = pageNum++;
-        revMapPageAsyncIoReq->stripeToFlush = stripe;
         revMapPageAsyncIoReq->vsid = vsid;
         int ret = revMapfile->AsyncIO(revMapPageAsyncIoReq);
         if (ret < 0)

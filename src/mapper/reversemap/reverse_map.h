@@ -56,7 +56,6 @@ const int NUM_SECTOR_ENTRIES = DEFAULT_REVMAP_PAGE_SIZE /
 const int NUM_ENTRIES = REVMAP_SECTOR_SIZE / REVMAP_ENTRY_SIZE; // 21
 
 class MetaFileIntf;
-class Stripe;
 class IVolumeInfoManager;
 class TelemetryPublisher;
 
@@ -136,7 +135,6 @@ public:
     void HandleIoComplete(void* data) override;
 
     int mpageNum;
-    Stripe* stripeToFlush = nullptr;
 };
 
 class ReverseMapPack
@@ -144,14 +142,14 @@ class ReverseMapPack
     friend class ReverseMapTest;
 
 public:
-    ReverseMapPack(void);
+    ReverseMapPack(void) = default;
+    ReverseMapPack(MetaFileIntf* file, uint32_t mpageSize_, uint32_t numMpagesPerStripe_, TelemetryPublisher* tp);
     virtual ~ReverseMapPack(void);
 
-    virtual void Init(MetaFileIntf* file, StripeId wbLsid_, StripeId vsid_, uint32_t mpageSize_, uint32_t numMpagesPerStripe_, TelemetryPublisher* tp);
-    virtual void Assign(StripeId vsid);
+    virtual void Assign(StripeId wbLsid, StripeId vsid, uint64_t fileOffset);
 
-    virtual int Load(uint64_t fileOffset, EventSmartPtr cb, uint32_t vsid);
-    virtual int Flush(Stripe* stripe, uint64_t fileOffset, EventSmartPtr cb, uint32_t vsid);
+    virtual int Load(EventSmartPtr cb);
+    virtual int Flush(EventSmartPtr cb);
 
     virtual int SetReverseMapEntry(uint64_t offset, BlkAddr rba, uint32_t volumeId);
     virtual std::tuple<BlkAddr, uint32_t> GetReverseMapEntry(uint64_t offset);
@@ -159,6 +157,7 @@ public:
     virtual void WaitPendingIoDone(void);
 
 private:
+    void _InitRevMaps(void);
     void _SetHeader(StripeId wblsid, StripeId vsid);
     std::tuple<uint32_t, uint32_t, uint32_t> _ReverseMapGeometry(uint64_t offset);
     void _RevMapPageIoDone(AsyncMetaFileIoCtx* ctx);
@@ -168,6 +167,8 @@ private:
     std::vector<RevMap*> revMaps;
 
     MetaFileIntf* revMapfile; // MFS file
+    uint64_t fileOffset;
+
     uint32_t mpageSize;
     std::atomic<uint32_t> mfsAsyncIoDonePages;
     std::atomic<MapFlushState> mapFlushState;

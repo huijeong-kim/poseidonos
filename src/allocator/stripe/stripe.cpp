@@ -38,10 +38,10 @@
 #include "src/include/branch_prediction.h"
 #include "src/include/meta_const.h"
 #include "src/include/pos_event_id.h"
-#include "src/spdk_wrapper/accel_engine_api.h"
-#include "src/volume/volume_list.h"
 #include "src/mapper/i_reversemap.h"
 #include "src/mapper/reversemap/reverse_map.h"
+#include "src/spdk_wrapper/accel_engine_api.h"
+#include "src/volume/volume_list.h"
 
 namespace pos
 {
@@ -120,11 +120,12 @@ Stripe::Assign(StripeId vsid_, StripeId wbLsid_, StripeId userLsid_, uint32_t vo
     activeFlush = false;
     if (isUserStripe == false)
     {
-        revMapPack = iReverseMap->AllocReverseMapPack(vsid);
+        revMapPack = iReverseMap->AllocReverseMapPack(vsid, UNMAP_STRIPE);
     }
     else
     {
-        revMapPack = iReverseMap->Assign(wbLsid, vsid);
+        iReverseMap->Assign(wbLsid, vsid);
+        revMapPack = nullptr;
     }
     return true;
 }
@@ -187,19 +188,44 @@ Stripe::UpdateReverseMapEntry(uint32_t offset, BlkAddr rba, uint32_t volumeId)
     {
         throw EID(STRIPE_INVALID_VOLUME_ID);
     }
-    iReverseMap->UpdateReverseMapEntry(revMapPack, wbLsid, offset, rba, volumeId);
+
+    if (isUserStripe == true)
+    {
+        iReverseMap->UpdateReverseMapEntry(wbLsid, offset, rba, volumeId);
+    }
+    else
+    {
+        assert(revMapPack != nullptr);
+        revMapPack->SetReverseMapEntry(offset, rba, volumeId);
+    }
 }
 
 std::tuple<BlkAddr, uint32_t>
 Stripe::GetReverseMapEntry(uint32_t offset)
 {
-    return iReverseMap->GetReverseMapEntry(revMapPack, wbLsid, offset);
+    if (isUserStripe == true)
+    {
+        return iReverseMap->GetReverseMapEntry(wbLsid, offset);
+    }
+    else
+    {
+        assert(revMapPack != nullptr);
+        return revMapPack->GetReverseMapEntry(offset);
+    }
 }
 
 int
 Stripe::Flush(EventSmartPtr callback)
 {
-    return iReverseMap->Flush(revMapPack, wbLsid, this, vsid, callback);
+    if (isUserStripe == true)
+    {
+        return iReverseMap->Flush(wbLsid, callback);
+    }
+    else
+    {
+        assert(revMapPack != nullptr);
+        return iReverseMap->Flush(revMapPack, callback);
+    }
 }
 
 uint32_t

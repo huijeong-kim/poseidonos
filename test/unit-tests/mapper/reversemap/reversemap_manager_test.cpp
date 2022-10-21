@@ -55,7 +55,7 @@ TEST(ReverseMapManager, ReverseMapManager_TestInit)
     NiceMock<MockIVSAMap> ivsaMap;
     NiceMock<MockIStripeMap> iStripeMap;
     EXPECT_CALL(addrInfo, IsUT).WillOnce(Return(true));
-    EXPECT_CALL(addrInfo, GetNumWbStripes).WillOnce(Return(1003));
+    EXPECT_CALL(addrInfo, GetNumWbStripes).WillRepeatedly(Return(1003));
     ON_CALL(addrInfo, GetMaxVSID).WillByDefault(Return(103));
     EXPECT_CALL(addrInfo, GetArrayId).WillOnce(Return(0));
     ReverseMapManager* revMap = new ReverseMapManager(&ivsaMap, &iStripeMap, &volumeManager, &addrInfo, nullptr);
@@ -72,7 +72,7 @@ TEST(ReverseMapManager, ReconstructMap_testIfFailToGetVolumeSize)
     NiceMock<MockIStripeMap> iStripeMap;
     EXPECT_CALL(addrInfo, IsUT).WillOnce(Return(true));
     ReverseMapManager revMap(&ivsaMap, &iStripeMap, &volumeManager, &addrInfo, nullptr);
-    EXPECT_CALL(addrInfo, GetNumWbStripes).WillOnce(Return(1003));
+    EXPECT_CALL(addrInfo, GetNumWbStripes).WillRepeatedly(Return(1003));
     EXPECT_CALL(addrInfo, GetMaxVSID).WillOnce(Return(103));
     EXPECT_CALL(addrInfo, GetArrayId).WillOnce(Return(0));
     EXPECT_CALL(addrInfo, GetBlksPerStripe).WillOnce(Return(344400));
@@ -97,7 +97,7 @@ TEST(ReverseMapManager, ReconstructReverseMap_testIfExecutedSuccesfullyWithEmpty
     NiceMock<MockIStripeMap> iStripeMap;
     ReverseMapManager revMap(&ivsaMap, &iStripeMap, &volumeManager, &addrInfo, nullptr);
     EXPECT_CALL(addrInfo, IsUT).WillOnce(Return(true));
-    EXPECT_CALL(addrInfo, GetNumWbStripes).WillOnce(Return(1003));
+    EXPECT_CALL(addrInfo, GetNumWbStripes).WillRepeatedly(Return(1003));
     EXPECT_CALL(addrInfo, GetMaxVSID).WillOnce(Return(103));
 
     EXPECT_CALL(addrInfo, GetArrayId).WillOnce(Return(0));
@@ -112,6 +112,7 @@ TEST(ReverseMapManager, ReconstructReverseMap_testIfExecutedSuccesfullyWithEmpty
     uint32_t volumeId = 1;
     StripeId vsid = 1;
     StripeId lsid = 3;
+    revMap.Assign(lsid, vsid);
     ExpectGetMapInfo(volumeManager, ivsaMap, iStripeMap, volumeId, vsid, lsid);
     int expectRetCode = 0;
     EXPECT_EQ(expectRetCode, revMap.ReconstructReverseMap(volumeId, NUM_BLKS_PER_STRIPE, lsid, vsid, NUM_BLKS_PER_STRIPE, revMapInfos));
@@ -119,7 +120,7 @@ TEST(ReverseMapManager, ReconstructReverseMap_testIfExecutedSuccesfullyWithEmpty
     // Then: ReverseMap should be set
     for (BlkOffset offset = startOffset; offset < NUM_BLKS_PER_STRIPE; offset++)
     {
-        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(nullptr, lsid, offset);
+        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(lsid, offset);
         BlkAddr expectRba = offset;
         EXPECT_EQ(expectRba, get<0>(actual));
         EXPECT_EQ(volumeId, get<1>(actual));
@@ -135,11 +136,11 @@ TEST(ReverseMapManager, ReconstructMap_testIfFailToGetMapInfoWithEmptyReverseMap
     NiceMock<MockIStripeMap> iStripeMap;
     ReverseMapManager revMap(&ivsaMap, &iStripeMap, &volumeManager, &addrInfo, nullptr);
     EXPECT_CALL(addrInfo, IsUT).WillOnce(Return(true));
-    EXPECT_CALL(addrInfo, GetNumWbStripes).WillOnce(Return(1003));
+    EXPECT_CALL(addrInfo, GetNumWbStripes).WillRepeatedly(Return(1003));
     EXPECT_CALL(addrInfo, GetMaxVSID).WillOnce(Return(103));
     EXPECT_CALL(addrInfo, GetArrayId).WillOnce(Return(0));
     EXPECT_CALL(addrInfo, GetBlksPerStripe).WillOnce(Return(344400));
-    EXPECT_CALL(addrInfo, GetMpageSize).WillOnce(Return(4032));
+    EXPECT_CALL(addrInfo, GetMpageSize).WillRepeatedly(Return(4032));
     revMap.Init();
 
     // When: Fail to get vsa map
@@ -152,12 +153,13 @@ TEST(ReverseMapManager, ReconstructMap_testIfFailToGetMapInfoWithEmptyReverseMap
     StripeId lsid = 1000;
     int expectRetCode = 0;
     uint32_t volumeId = 1;
+    revMap.Assign(lsid, vsid);
     EXPECT_EQ(expectRetCode, revMap.ReconstructReverseMap(volumeId, NUM_BLKS_PER_STRIPE, lsid, vsid, NUM_BLKS_PER_STRIPE, revMapInfos));
 
     // Then: ReverseMap should be unmmap
     for (BlkOffset offset = startOffset; offset < NUM_BLKS_PER_STRIPE; offset++)
     {
-        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(nullptr, lsid, offset);
+        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(lsid, offset);
         BlkAddr expectRba = UINT64_MAX;
         BlkAddr expectVolumeId = (1 << 10) - 1;
         EXPECT_EQ(expectRba, get<0>(actual));
@@ -173,11 +175,11 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithFullReverseM
     NiceMock<MockIStripeMap> iStripeMap;
     ReverseMapManager revMap(&ivsaMap, &iStripeMap, &volumeManager, &addrInfo, nullptr);
     EXPECT_CALL(addrInfo, IsUT).WillOnce(Return(true));
-    EXPECT_CALL(addrInfo, GetNumWbStripes).WillOnce(Return(1005));
+    EXPECT_CALL(addrInfo, GetNumWbStripes).WillRepeatedly(Return(1005));
     EXPECT_CALL(addrInfo, GetMaxVSID).WillOnce(Return(105));
     EXPECT_CALL(addrInfo, GetArrayId).WillOnce(Return(0));
     EXPECT_CALL(addrInfo, GetBlksPerStripe).WillOnce(Return(344400));
-    EXPECT_CALL(addrInfo, GetMpageSize).WillOnce(Return(4032));
+    EXPECT_CALL(addrInfo, GetMpageSize).WillRepeatedly(Return(4032));
     revMap.Init();
 
     // When: ReverseMapInfo is set fully
@@ -188,6 +190,7 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithFullReverseM
     uint32_t volumeId = 1;
     StripeId vsid = 100;
     StripeId lsid = 1000;
+    revMap.Assign(lsid, vsid);
     ExpectGetMapInfo(volumeManager, ivsaMap, iStripeMap, volumeId, vsid, lsid);
 
     int expectRetCode = 0;
@@ -196,7 +199,7 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithFullReverseM
     // Then: ReverseMap should be set
     for (BlkOffset offset = startOffset; offset < NUM_BLKS_PER_STRIPE; offset++)
     {
-        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(nullptr, lsid, offset);
+        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(lsid, offset);
         BlkAddr expectRba = offset;
         EXPECT_EQ(expectRba, get<0>(actual));
         EXPECT_EQ(volumeId, get<1>(actual));
@@ -212,11 +215,11 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithPartialRever
     NiceMock<MockIStripeMap> iStripeMap;
     ReverseMapManager revMap(&ivsaMap, &iStripeMap, &volumeManager, &addrInfo, nullptr);
     EXPECT_CALL(addrInfo, IsUT).WillOnce(Return(true));
-    EXPECT_CALL(addrInfo, GetNumWbStripes).WillOnce(Return(1005));
+    EXPECT_CALL(addrInfo, GetNumWbStripes).WillRepeatedly(Return(1005));
     EXPECT_CALL(addrInfo, GetMaxVSID).WillOnce(Return(105));
     EXPECT_CALL(addrInfo, GetArrayId).WillOnce(Return(0));
     EXPECT_CALL(addrInfo, GetBlksPerStripe).WillOnce(Return(344400));
-    EXPECT_CALL(addrInfo, GetMpageSize).WillOnce(Return(4032));
+    EXPECT_CALL(addrInfo, GetMpageSize).WillRepeatedly(Return(4032));
     revMap.Init();
 
     // When: ReverseMapInfo is set partially
@@ -227,6 +230,7 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithPartialRever
     uint32_t volumeId = 1;
     StripeId vsid = 100;
     StripeId lsid = 1000;
+    revMap.Assign(lsid, vsid);
     ExpectGetMapInfo(volumeManager, ivsaMap, iStripeMap, volumeId, vsid, lsid);
 
     int expectRetCode = 0;
@@ -235,7 +239,7 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithPartialRever
     // Then: ReverseMap should be set
     for (BlkOffset offset = startOffset; offset < 2; offset++)
     {
-        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(nullptr, lsid, offset);
+        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(lsid, offset);
         BlkAddr expectRba = offset;
         EXPECT_EQ(expectRba, get<0>(actual));
         EXPECT_EQ(volumeId, get<1>(actual));
@@ -251,11 +255,11 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithPartialRever
     NiceMock<MockIStripeMap> iStripeMap;
     ReverseMapManager revMap(&ivsaMap, &iStripeMap, &volumeManager, &addrInfo, nullptr);
     EXPECT_CALL(addrInfo, IsUT).WillOnce(Return(true));
-    EXPECT_CALL(addrInfo, GetNumWbStripes).WillOnce(Return(1005));
+    EXPECT_CALL(addrInfo, GetNumWbStripes).WillRepeatedly(Return(1005));
     EXPECT_CALL(addrInfo, GetMaxVSID).WillOnce(Return(105));
     EXPECT_CALL(addrInfo, GetArrayId).WillOnce(Return(0));
     EXPECT_CALL(addrInfo, GetBlksPerStripe).WillOnce(Return(344400));
-    EXPECT_CALL(addrInfo, GetMpageSize).WillOnce(Return(4032));
+    EXPECT_CALL(addrInfo, GetMpageSize).WillRepeatedly(Return(4032));
     revMap.Init();
 
     // When: ReverseMapInfo is set partially
@@ -266,13 +270,14 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithPartialRever
     uint32_t volumeId = 1;
     StripeId vsid = 100;
     StripeId lsid = 1000;
+    revMap.Assign(lsid, vsid);
     ExpectGetMapInfo(volumeManager, ivsaMap, iStripeMap, volumeId, vsid, lsid);
     int expectRetCode = 0;
     EXPECT_EQ(expectRetCode, revMap.ReconstructReverseMap(volumeId, NUM_BLKS_PER_STRIPE, lsid, vsid, NUM_BLKS_PER_STRIPE, revMapInfos));
     // Then: ReverseMap should be set
     for (BlkOffset offset = startOffset; offset < NUM_BLKS_PER_STRIPE; offset++)
     {
-        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(nullptr, lsid, offset);
+        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(lsid, offset);
         BlkAddr expectRba = offset;
         EXPECT_EQ(expectRba, get<0>(actual));
         EXPECT_EQ(volumeId, get<1>(actual));
@@ -288,11 +293,11 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithPartialRever
     NiceMock<MockIStripeMap> iStripeMap;
     ReverseMapManager revMap(&ivsaMap, &iStripeMap, &volumeManager, &addrInfo, nullptr);
     EXPECT_CALL(addrInfo, IsUT).WillOnce(Return(true));
-    EXPECT_CALL(addrInfo, GetNumWbStripes).WillOnce(Return(1003));
+    EXPECT_CALL(addrInfo, GetNumWbStripes).WillRepeatedly(Return(1003));
     EXPECT_CALL(addrInfo, GetMaxVSID).WillOnce(Return(103));
     EXPECT_CALL(addrInfo, GetArrayId).WillOnce(Return(0));
     EXPECT_CALL(addrInfo, GetBlksPerStripe).WillOnce(Return(344400));
-    EXPECT_CALL(addrInfo, GetMpageSize).WillOnce(Return(4032));
+    EXPECT_CALL(addrInfo, GetMpageSize).WillRepeatedly(Return(4032));
     revMap.Init();
     // When: ReverseMapInfo is set partially
     uint64_t startOffset = NUM_BLKS_PER_STRIPE / 3;
@@ -302,6 +307,7 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithPartialRever
     uint32_t volumeId = 1;
     StripeId vsid = 100;
     StripeId lsid = 1000;
+    revMap.Assign(lsid, vsid);
     ExpectGetMapInfo(volumeManager, ivsaMap, iStripeMap, volumeId, vsid, lsid);
 
     int expectRetCode = 0;
@@ -310,7 +316,7 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithPartialRever
     // Then: ReverseMap should be set
     for (BlkOffset offset = startOffset; offset < NUM_BLKS_PER_STRIPE; offset++)
     {
-        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(nullptr, lsid, offset);
+        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(lsid, offset);
         BlkAddr expectRba = offset;
         EXPECT_EQ(expectRba, get<0>(actual));
         EXPECT_EQ(volumeId, get<1>(actual));
@@ -326,11 +332,11 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithSeveralParti
     NiceMock<MockIStripeMap> iStripeMap;
     ReverseMapManager revMap(&ivsaMap, &iStripeMap, &volumeManager, &addrInfo, nullptr);
     EXPECT_CALL(addrInfo, IsUT).WillOnce(Return(true));
-    EXPECT_CALL(addrInfo, GetNumWbStripes).WillOnce(Return(1003));
+    EXPECT_CALL(addrInfo, GetNumWbStripes).WillRepeatedly(Return(1003));
     EXPECT_CALL(addrInfo, GetMaxVSID).WillOnce(Return(103));
     EXPECT_CALL(addrInfo, GetArrayId).WillOnce(Return(0));
     EXPECT_CALL(addrInfo, GetBlksPerStripe).WillOnce(Return(344400));
-    EXPECT_CALL(addrInfo, GetMpageSize).WillOnce(Return(4032));
+    EXPECT_CALL(addrInfo, GetMpageSize).WillRepeatedly(Return(4032));
     revMap.Init();
     // When: ReverseMapInfo is set partially
     uint64_t startOffset = NUM_BLKS_PER_STRIPE / 5;
@@ -345,6 +351,7 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithSeveralParti
     uint32_t volumeId = 1;
     StripeId vsid = 100;
     StripeId lsid = 1000;
+    revMap.Assign(lsid, vsid);
     ExpectGetMapInfo(volumeManager, ivsaMap, iStripeMap, volumeId, vsid, lsid);
 
     int expectRetCode = 0;
@@ -353,7 +360,7 @@ TEST(ReverseMapManager, ReconstructMap_testIfExecutedSuccesfullyWithSeveralParti
     // Then: ReverseMap should be set
     for (BlkOffset offset = startOffset; offset < NUM_BLKS_PER_STRIPE; offset++)
     {
-        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(nullptr, lsid, offset);
+        std::tuple<BlkAddr, uint32_t> actual = revMap.GetReverseMapEntry(lsid, offset);
         BlkAddr expectRba = offset;
         EXPECT_EQ(expectRba, get<0>(actual));
         EXPECT_EQ(volumeId, get<1>(actual));

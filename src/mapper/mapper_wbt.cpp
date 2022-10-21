@@ -273,7 +273,7 @@ MapperWbt::ReadReverseMapEntry(StripeId vsid, BlkOffset offset, std::string fnam
     // Print out to fname
     BlkAddr rba;
     uint32_t volId;
-    std::tie(rba, volId) = reverseMapManager->GetReverseMapEntry(nullptr, 0, offset);
+    std::tie(rba, volId) = reverseMapManager->GetReverseMapEntry(nullptr, offset);
 
     std::ofstream outFile(fname, std::ofstream::app);
 
@@ -298,7 +298,7 @@ MapperWbt::WriteReverseMapEntry(StripeId vsid, BlkOffset offset, BlkAddr rba, ui
     }
 
     // Update entry
-    reverseMapManager->UpdateReverseMapEntry(nullptr, 0, offset, rba, volumeId);
+    reverseMapManager->UpdateReverseMapEntry(nullptr, offset, rba, volumeId);
     ret = reverseMapManager->LoadReverseMapForWBT(nullptr, fileOffset, fileSize, reverseMapManager->GetReverseMapPtrForWBT());
     if (ret < 0)
     {

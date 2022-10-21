@@ -75,7 +75,7 @@ VictimStripe::VictimStripe(IArrayInfo* array,
     dataBlks = array->GetSizeInfo(PartitionType::USER_DATA)->blksPerStripe;
     if (iReverseMap != nullptr)
     {
-        revMapPack = iReverseMap->AllocReverseMapPack(myLsid);
+        revMapPack = iReverseMap->AllocReverseMapPack(myLsid, UNMAP_STRIPE);
     }
 }
 
@@ -113,7 +113,7 @@ VictimStripe::_InitValue(StripeId _lsid)
 void
 VictimStripe::_LoadReverseMap(CallbackSmartPtr callback)
 {
-    iReverseMap->Load(revMapPack, UNMAP_STRIPE, myLsid, callback);
+    iReverseMap->Load(revMapPack, callback);
 }
 
 bool
@@ -141,7 +141,7 @@ VictimStripe::LoadValidBlock(void)
         }
 
         BlkInfo blkInfo;
-        std::tie(blkInfo.rba, blkInfo.volID) = iReverseMap->GetReverseMapEntry(revMapPack, UNMAP_STRIPE, blockOffset);
+        std::tie(blkInfo.rba, blkInfo.volID) = iReverseMap->GetReverseMapEntry(revMapPack, blockOffset);
 
         if ((MAX_VOLUME_COUNT <= blkInfo.volID) || (INVALID_RBA <= blkInfo.rba))
         {

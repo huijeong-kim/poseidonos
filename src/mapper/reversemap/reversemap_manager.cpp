@@ -50,8 +50,7 @@
 namespace pos
 {
 ReverseMapManager::ReverseMapManager(IVSAMap* ivsaMap, IStripeMap* istripeMap, IVolumeInfoManager* vol, MapperAddressInfo* addrInfo_, TelemetryPublisher* tp)
-: mpageSize(0),
-  numMpagesPerStripe(0),
+: numMpagesPerStripe(0),
   fileSizePerStripe(0),
   fileSizeWholeRevermap(0),
   revMapPacks(nullptr),
@@ -129,11 +128,8 @@ ReverseMapManager::Init(void)
 
     // Make ReverseMapPack:: objects by the number of WriteBuffer stripes
     uint32_t numWbStripes = addrInfo->GetNumWbStripes();
-    revMapPacks = new ReverseMapPack[numWbStripes]();
-    for (StripeId wbLsid = 0; wbLsid < numWbStripes; ++wbLsid)
-    {
-        revMapPacks[wbLsid].Init(revMapWholefile, wbLsid, UINT32_MAX, mpageSize, numMpagesPerStripe, telemetryPublisher);
-    }
+    revMapPacks = new ReverseMapPack[numWbStripes](revMapWholefile, addrInfo->GetMpageSize(), numMpagesPerStripe, telemetryPublisher);
+    // revMapPacks should be used after Assign()-ed
 }
 
 void
@@ -155,73 +151,71 @@ ReverseMapManager::Dispose(void)
     }
 }
 
-int
-ReverseMapManager::Load(ReverseMapPack* rev, StripeId wblsid, StripeId vsid, EventSmartPtr cb)
+uint64_t
+ReverseMapManager::_GetFileOffset(StripeId vsid)
 {
-    uint64_t fileOffset = fileSizePerStripe * vsid;
-    if (rev != nullptr)
-    {
-        return rev->Load(fileOffset, cb, vsid);
-    }
-    else
-    {
-        return revMapPacks[wblsid].Load(fileOffset, cb, vsid);
-    }
+    return fileSizePerStripe * vsid;
 }
 
 int
-ReverseMapManager::Flush(ReverseMapPack* rev, StripeId wblsid, Stripe* stripe, StripeId vsid, EventSmartPtr cb)
+ReverseMapManager::Load(ReverseMapPack* rev, EventSmartPtr cb)
 {
-    uint64_t fileOffset = fileSizePerStripe * vsid;
-    if (rev != nullptr)
-    {
-        return rev->Flush(stripe, fileOffset, cb, vsid);
-    }
-    else
-    {
-        return revMapPacks[wblsid].Flush(stripe, fileOffset, cb, vsid);
-    }
+    assert(rev != nullptr);
+    return rev->Load(cb);
 }
 
 int
-ReverseMapManager::UpdateReverseMapEntry(ReverseMapPack* rev, StripeId wblsid, uint64_t offset, BlkAddr rba, uint32_t volumeId)
+ReverseMapManager::Flush(ReverseMapPack* rev, EventSmartPtr cb)
 {
-    if (rev != nullptr)
-    {
-        return rev->SetReverseMapEntry(offset, rba, volumeId);
-    }
-    else
-    {
-        return revMapPacks[wblsid].SetReverseMapEntry(offset, rba, volumeId);
-    }
+    assert(rev != nullptr);
+    return rev->Flush(cb);
+}
+
+int
+ReverseMapManager::Flush(StripeId wblsid, EventSmartPtr cb)
+{
+    return revMapPacks[wblsid].Flush(cb);
+}
+
+int
+ReverseMapManager::UpdateReverseMapEntry(ReverseMapPack* rev, uint64_t offset, BlkAddr rba, uint32_t volumeId)
+{
+    assert(rev != nullptr);
+    return rev->SetReverseMapEntry(offset, rba, volumeId);
+}
+
+int
+ReverseMapManager::UpdateReverseMapEntry(StripeId wblsid, uint64_t offset, BlkAddr rba, uint32_t volumeId)
+{
+    assert(wblsid < addrInfo->GetNumWbStripes());
+    return revMapPacks[wblsid].SetReverseMapEntry(offset, rba, volumeId);
 }
 
 std::tuple<BlkAddr, uint32_t>
-ReverseMapManager::GetReverseMapEntry(ReverseMapPack* rev, StripeId wblsid, uint64_t offset)
+ReverseMapManager::GetReverseMapEntry(ReverseMapPack* rev, uint64_t offset)
 {
-    if (rev != nullptr)
-    {
-        return rev->GetReverseMapEntry(offset);
-    }
-    else
-    {
-        return revMapPacks[wblsid].GetReverseMapEntry(offset);
-    }
+    assert(rev != nullptr);
+    return rev->GetReverseMapEntry(offset);
 }
 
-ReverseMapPack*
+std::tuple<BlkAddr, uint32_t>
+ReverseMapManager::GetReverseMapEntry(StripeId wblsid, uint64_t offset)
+{
+    assert(wblsid < addrInfo->GetNumWbStripes());
+    return revMapPacks[wblsid].GetReverseMapEntry(offset);
+}
+
+void
 ReverseMapManager::Assign(StripeId wblsid, StripeId vsid)
 {
-    revMapPacks[wblsid].Assign(vsid);
-    return &revMapPacks[wblsid];
+    revMapPacks[wblsid].Assign(wblsid, vsid, _GetFileOffset(vsid));
 }
 
 ReverseMapPack*
-ReverseMapManager::AllocReverseMapPack(uint32_t vsid)
+ReverseMapManager::AllocReverseMapPack(StripeId vsid, StripeId wblsid)
 {
-    ReverseMapPack* revPack = new ReverseMapPack();
-    revPack->Init(revMapWholefile, UNMAP_STRIPE, vsid, mpageSize, numMpagesPerStripe, telemetryPublisher);
-    revPack->Assign(vsid);
+    ReverseMapPack* revPack = new ReverseMapPack(revMapWholefile, addrInfo->GetMpageSize(), numMpagesPerStripe, telemetryPublisher);
+    revPack->Assign(wblsid, vsid, _GetFileOffset(vsid));
     return revPack;
 }
 
@@ -353,8 +347,9 @@ int
 ReverseMapManager::_SetNumMpages(void)
 {
     int maxVsid = addrInfo->GetMaxVSID();
-    mpageSize = addrInfo->GetMpageSize();
+    uint64_t mpageSize = addrInfo->GetMpageSize();
     uint32_t blksPerStripe = addrInfo->GetBlksPerStripe();
+
     uint32_t entriesPerNormalPage = (mpageSize / REVMAP_SECTOR_SIZE) * (REVMAP_SECTOR_SIZE / REVMAP_ENTRY_SIZE);
     uint32_t entriesPerFirstPage = entriesPerNormalPage - (REVMAP_SECTOR_SIZE / REVMAP_ENTRY_SIZE);
 
