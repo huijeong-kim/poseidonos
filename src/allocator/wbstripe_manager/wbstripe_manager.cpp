@@ -116,7 +116,7 @@ WBStripeManager::Init(void)
 
     for (uint32_t stripeCnt = 0; stripeCnt < totalNvmStripes; ++stripeCnt)
     {
-        Stripe* stripe = new Stripe(iReverseMap, true, addrInfo->GetblksPerStripe());
+        Stripe* stripe = new Stripe(iReverseMap, addrInfo->GetblksPerStripe());
         // DEPRECATED: "stripe" used to have its dedicated buffer that would be allocated from stripeBufferPool, but not any more.
         wbStripeArray.push_back(stripe);
     }
@@ -268,6 +268,15 @@ WBStripeManager::_WaitForStripeFlushComplete(Stripe* stripe)
     {
         usleep(1);
     }
+
+    // TODO Stripe will be finishe after revmap flushed. So waiting for all revmap IO is not valid for now.
+    // But we may need to enable it later - when revmap is flushed after user data flushed
+    /*
+    if (stripe->GetRevMapPack() != nullptr)
+    {
+        stripe->GetRevMapPack()->WaitPendingIoDone();
+    }
+    */
 }
 
 int
@@ -281,7 +290,7 @@ WBStripeManager::ReconstructActiveStripe(uint32_t volumeId, StripeId wbLsid, Vir
         assert(volumeManager != nullptr);
         volumeManager->GetVolumeSize(volumeId, totalRbaNum);
         totalRbaNum = DivideUp(totalRbaNum, BLOCK_SIZE);
-        ret = iReverseMap->ReconstructReverseMap(volumeId, totalRbaNum, wbLsid, tailVsa.stripeId, tailVsa.offset, revMapInfos);
+        ret = iReverseMap->ReconstructReverseMap(volumeId, totalRbaNum, wbLsid, tailVsa.stripeId, tailVsa.offset, revMapInfos, stripe->GetRevMapPack());
     }
     return ret;
 }

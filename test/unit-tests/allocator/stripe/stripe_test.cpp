@@ -16,7 +16,7 @@ namespace pos
 {
 TEST(Stripe, Stripe_TestConstructor)
 {
-    Stripe* stripe = new Stripe(nullptr, false, 10);
+    Stripe* stripe = new Stripe(nullptr, 10);
     delete stripe;
 }
 
@@ -25,7 +25,7 @@ TEST(Stripe, Assign_TestIfValidatesTheEqualityOfVsidAndUserLsid)
     // Given 1: vsid == userLsid
     NiceMock<MockReverseMapManager> revMap;
     NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>();
-    Stripe stripe(&revMap, false, 10);
+    Stripe stripe(&revMap, 10);
     EXPECT_CALL(revMap, AllocReverseMapPack).WillOnce(Return(revMapPack));
     StripeId vsid = 10;
     StripeId wbLsid = 24;
@@ -56,7 +56,7 @@ TEST(Stripe, Assign_TestIfValidatesTheEqualityOfVsidAndUserLsid)
 TEST(Stripe, GetAsTailArrayIdx_TestSimpleGetter)
 {
     // given
-    Stripe stripe(nullptr, false, 10);
+    Stripe stripe(nullptr, 10);
     // when
     stripe.GetVolumeId();
 }
@@ -64,7 +64,7 @@ TEST(Stripe, GetAsTailArrayIdx_TestSimpleGetter)
 TEST(Stripe, GetVsid_TestSimpleGetter)
 {
     // given
-    Stripe stripe(nullptr, false, 10);
+    Stripe stripe(nullptr, 10);
     // when
     stripe.GetVsid();
 }
@@ -72,7 +72,7 @@ TEST(Stripe, GetVsid_TestSimpleGetter)
 TEST(Stripe, GetWbLsid_TestSimpleGetter)
 {
     // given
-    Stripe stripe(nullptr, false, 10);
+    Stripe stripe(nullptr, 10);
     // when
     stripe.GetWbLsid();
 }
@@ -80,7 +80,7 @@ TEST(Stripe, GetWbLsid_TestSimpleGetter)
 TEST(Stripe, GetUserLsid_TestSimpleGetter)
 {
     // given
-    Stripe stripe(nullptr, false, 10);
+    Stripe stripe(nullptr, 10);
     // when
     stripe.GetUserLsid();
 }
@@ -91,8 +91,8 @@ TEST(Stripe, Flush_TestwithRevMapPack)
     NiceMock<MockReverseMapManager> revMap;
     NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>();
     EXPECT_CALL(revMap, AllocReverseMapPack).WillOnce(Return(revMapPack));
-    Stripe stripe(&revMap, false, 10);
-    EXPECT_CALL(revMap, Flush(revMapPack, _)).Times(1);
+    Stripe stripe(&revMap, 10);
+    EXPECT_CALL(*revMapPack, Flush).Times(1);
     // when
     stripe.Assign(10, 20, 10, 0);
     stripe.Flush(nullptr);
@@ -104,7 +104,7 @@ TEST(Stripe, Flush_Test)
     NiceMock<MockReverseMapManager>* revMap = new NiceMock<MockReverseMapManager>();
     NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>();
     EXPECT_CALL(*revMap, AllocReverseMapPack).WillOnce(Return(revMapPack));
-    Stripe stripe(revMap, false, 10);
+    Stripe stripe(revMap, 10);
     // when
     stripe.Assign(10, 20, 10, 0);
     int ret = stripe.Flush(nullptr);
@@ -117,7 +117,7 @@ TEST(Stripe, IsFinished_TestSimpleGetter)
 {
     // given
     NiceMock<MockReverseMapManager>* revMap = new NiceMock<MockReverseMapManager>();
-    Stripe stripe(revMap, false, 10);
+    Stripe stripe(revMap, 10);
     // given 1.
     stripe.SetFinished(true);
     // when 1.
@@ -136,7 +136,7 @@ TEST(Stripe, IsFinished_TestSimpleGetter)
 TEST(Stripe, SetFinished_TestSimpleSetter)
 {
     // given
-    Stripe stripe(nullptr, false, 10);
+    Stripe stripe(nullptr, 10);
     // when
     stripe.SetFinished(true);
     // then
@@ -147,7 +147,7 @@ TEST(Stripe, SetFinished_TestSimpleSetter)
 TEST(Stripe, GetBlksRemaining_TestSimpleGetter)
 {
     // given
-    Stripe stripe(nullptr, true, 10);
+    Stripe stripe(nullptr, 10);
     // when
     int ret = stripe.GetBlksRemaining();
 }
@@ -155,7 +155,7 @@ TEST(Stripe, GetBlksRemaining_TestSimpleGetter)
 TEST(Stripe, IsOkToFree_TestSimpleGetter)
 {
     // given
-    Stripe stripe(nullptr, true, 10);
+    Stripe stripe(nullptr, 10);
     // given 1.
     stripe.Refer();
     // when 1.
@@ -178,7 +178,7 @@ TEST(Stripe, UpdateReverseMapEntry_Test)
     NiceMock<MockReverseMapManager> revMap;
     NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>();
     EXPECT_CALL(revMap, AllocReverseMapPack).WillRepeatedly(Return(revMapPack));
-    Stripe stripe(&revMap, false, 10);
+    Stripe stripe(&revMap, 10);
     // given 1.
     // TODO remove this test (given 1)
     BlkAddr rba = INVALID_RBA;
@@ -213,7 +213,7 @@ TEST(Stripe, GetReverseMapEntry_TestSimpleGetter)
     NiceMock<MockReverseMapManager> revMap;
     NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>();
     EXPECT_CALL(revMap, AllocReverseMapPack).WillOnce(Return(revMapPack));
-    Stripe stripe(&revMap, false, 10);
+    Stripe stripe(&revMap, 10);
     stripe.Assign(10, 20, 10, 0);
 
     EXPECT_CALL(*revMapPack, GetReverseMapEntry).Times(1);
@@ -226,7 +226,7 @@ TEST(Stripe, UpdateVictimVsa_TestSimpleSetter)
     // given
     NiceMock<MockReverseMapManager>* revMap = new NiceMock<MockReverseMapManager>(nullptr, nullptr, nullptr, nullptr, nullptr);
     NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>();
-    Stripe stripe(revMap, false, 10);
+    Stripe stripe(revMap, 10);
 
     VirtualBlkAddr vsa = {.stripeId = 0, .offset = 0};
     EXPECT_CALL(*revMap, AllocReverseMapPack).WillOnce(Return(revMapPack));
@@ -241,7 +241,7 @@ TEST(Stripe, GetVictimVsa_TestSimpleGetter)
     // given
     NiceMock<MockReverseMapManager>* revMap = new NiceMock<MockReverseMapManager>();
 
-    Stripe stripe(revMap, false, 1);
+    Stripe stripe(revMap, 1);
     VirtualBlkAddr vsa = {.stripeId = 0, .offset = 5};
     EXPECT_CALL(*revMap, AllocReverseMapPack).WillOnce(Return(nullptr));
     stripe.Assign(0, 0, 0, 0);
@@ -256,7 +256,7 @@ TEST(Stripe, GetVictimVsa_TestSimpleGetter)
 TEST(Stripe, UpdateFlushIo_TestSimple)
 {
     NiceMock<MockReverseMapManager>* revMap = new NiceMock<MockReverseMapManager>();
-    Stripe stripe(revMap, true, 1);
+    Stripe stripe(revMap, 1);
 
     // When
     stripe.SetFinished(true);

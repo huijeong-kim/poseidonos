@@ -141,7 +141,7 @@ VictimStripe::LoadValidBlock(void)
         }
 
         BlkInfo blkInfo;
-        std::tie(blkInfo.rba, blkInfo.volID) = iReverseMap->GetReverseMapEntry(revMapPack, blockOffset);
+        std::tie(blkInfo.rba, blkInfo.volID) = revMapPack->GetReverseMapEntry(blockOffset);
 
         if ((MAX_VOLUME_COUNT <= blkInfo.volID) || (INVALID_RBA <= blkInfo.rba))
         {

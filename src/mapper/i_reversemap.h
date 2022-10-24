@@ -43,15 +43,9 @@ class IReverseMap
 {
 public:
     virtual int Load(ReverseMapPack* rev, EventSmartPtr cb) = 0;
-    virtual int UpdateReverseMapEntry(ReverseMapPack* rev, uint64_t offset, BlkAddr rba, uint32_t volumeId) = 0;
-    virtual int UpdateReverseMapEntry(StripeId wblsid, uint64_t offset, BlkAddr rba, uint32_t volumeId) = 0;
-    virtual std::tuple<BlkAddr, uint32_t> GetReverseMapEntry(ReverseMapPack* rev, uint64_t offset) = 0;
-    virtual std::tuple<BlkAddr, uint32_t> GetReverseMapEntry(StripeId wblsid, uint64_t offset) = 0;
-    virtual void Assign(StripeId wblsid, StripeId vsid) = 0;
-    virtual ReverseMapPack* AllocReverseMapPack(StripeId vsid, StripeId wblsid) = 0;
-    virtual int ReconstructReverseMap(uint32_t volumeId, uint64_t totalRba, uint32_t wblsid, uint32_t vsid, uint64_t blockCount, std::map<uint64_t, BlkAddr> revMapInfos) = 0;
     virtual int Flush(ReverseMapPack* rev, EventSmartPtr cb) = 0;
-    virtual int Flush(StripeId wblsid, EventSmartPtr cb) = 0;
+    virtual ReverseMapPack* AllocReverseMapPack(StripeId vsid, StripeId wblsid) = 0;
+    virtual int ReconstructReverseMap(uint32_t volumeId, uint64_t totalRba, uint32_t wblsid, uint32_t vsid, uint64_t blockCount, std::map<uint64_t, BlkAddr> revMapInfos, ReverseMapPack* revMapPack) = 0;
 };
 
 } // namespace pos

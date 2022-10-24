@@ -50,8 +50,8 @@ class Stripe
 {
 public:
     Stripe(void) = default;
-    Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, bool isUserStripe, uint32_t numBlksPerStripe);
-    Stripe(IReverseMap* revMapMan, bool isUserStripe_, uint32_t numBlksPerStripe);
+    Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, uint32_t numBlksPerStripe);
+    Stripe(IReverseMap* revMapMan, uint32_t numBlksPerStripe);
     virtual ~Stripe(void);
     virtual bool Assign(StripeId vsid, StripeId wbLsid, StripeId userLsid, uint32_t volumeId);
 
@@ -61,6 +61,7 @@ public:
     virtual StripeId GetWbLsid(void);
     virtual StripeId GetUserLsid(void);
 
+    ReverseMapPack* GetRevMapPack(void);
     virtual void UpdateReverseMapEntry(uint32_t offset, BlkAddr rba, uint32_t volumeId);
     virtual std::tuple<BlkAddr, uint32_t> GetReverseMapEntry(uint32_t offset);
     virtual int Flush(EventSmartPtr callback);
@@ -95,7 +96,6 @@ protected: // for UT
     std::atomic<uint32_t> referenceCount;
     std::vector<VirtualBlkAddr> oldVsaList;
     uint32_t totalBlksPerUserStripe;
-    bool isUserStripe;
 
     FlushIoSmartPtr flushIo;
     std::mutex flushIoUpdate;

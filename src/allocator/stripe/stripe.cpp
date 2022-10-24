@@ -45,7 +45,7 @@
 
 namespace pos
 {
-Stripe::Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, bool isUserStripe_, uint32_t numBlksPerStripe)
+Stripe::Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, uint32_t numBlksPerStripe)
 : volumeId(UINT32_MAX),
   vsid(UINT32_MAX),
   wbLsid(UINT32_MAX),
@@ -55,27 +55,23 @@ Stripe::Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, bool isUserStripe_, 
   remaining(0),
   referenceCount(0),
   totalBlksPerUserStripe(numBlksPerStripe), // for UT
-  isUserStripe(isUserStripe_),
   iReverseMap(revMapMan),
   activeFlush(false)
 {
     flushIo = nullptr;
 }
 
-Stripe::Stripe(IReverseMap* revMapMan, bool isUserStripe_, uint32_t numBlksPerStripe)
-: Stripe(nullptr, revMapMan, isUserStripe_, numBlksPerStripe)
+Stripe::Stripe(IReverseMap* revMapMan, uint32_t numBlksPerStripe)
+: Stripe(nullptr, revMapMan, numBlksPerStripe)
 {
 }
 // LCOV_EXCL_START
 Stripe::~Stripe(void)
 {
-    if (isUserStripe == false)
+    if (revMapPack != nullptr)
     {
-        if (revMapPack != nullptr)
-        {
-            delete revMapPack;
-            revMapPack = nullptr;
-        }
+        delete revMapPack;
+        revMapPack = nullptr;
     }
 }
 // LCOV_EXCL_STOP
@@ -118,15 +114,9 @@ Stripe::Assign(StripeId vsid_, StripeId wbLsid_, StripeId userLsid_, uint32_t vo
     remaining.store(totalBlksPerUserStripe, memory_order_release);
     finished = false;
     activeFlush = false;
-    if (isUserStripe == false)
-    {
-        revMapPack = iReverseMap->AllocReverseMapPack(vsid, UNMAP_STRIPE);
-    }
-    else
-    {
-        iReverseMap->Assign(wbLsid, vsid);
-        revMapPack = nullptr;
-    }
+
+    // wbLsid of GC stripe would be UNMAP_STRIPE
+    revMapPack = iReverseMap->AllocReverseMapPack(vsid, wbLsid);
     return true;
 }
 
@@ -181,6 +171,13 @@ Stripe::GetVolumeId(void)
     return volumeId;
 }
 
+// Temporal use only
+ReverseMapPack*
+Stripe::GetRevMapPack(void)
+{
+    return revMapPack;
+}
+
 void
 Stripe::UpdateReverseMapEntry(uint32_t offset, BlkAddr rba, uint32_t volumeId)
 {
@@ -189,43 +186,22 @@ Stripe::UpdateReverseMapEntry(uint32_t offset, BlkAddr rba, uint32_t volumeId)
         throw EID(STRIPE_INVALID_VOLUME_ID);
     }
 
-    if (isUserStripe == true)
-    {
-        iReverseMap->UpdateReverseMapEntry(wbLsid, offset, rba, volumeId);
-    }
-    else
-    {
-        assert(revMapPack != nullptr);
-        revMapPack->SetReverseMapEntry(offset, rba, volumeId);
-    }
+    assert(revMapPack != nullptr);
+    revMapPack->SetReverseMapEntry(offset, rba, volumeId);
 }
 
 std::tuple<BlkAddr, uint32_t>
 Stripe::GetReverseMapEntry(uint32_t offset)
 {
-    if (isUserStripe == true)
-    {
-        return iReverseMap->GetReverseMapEntry(wbLsid, offset);
-    }
-    else
-    {
-        assert(revMapPack != nullptr);
-        return revMapPack->GetReverseMapEntry(offset);
-    }
+    assert(revMapPack != nullptr);
+    return revMapPack->GetReverseMapEntry(offset);
 }
 
 int
 Stripe::Flush(EventSmartPtr callback)
 {
-    if (isUserStripe == true)
-    {
-        return iReverseMap->Flush(wbLsid, callback);
-    }
-    else
-    {
-        assert(revMapPack != nullptr);
-        return iReverseMap->Flush(revMapPack, callback);
-    }
+    assert(revMapPack != nullptr);
+    return iReverseMap->Flush(revMapPack, callback);
 }
 
 uint32_t
@@ -253,7 +229,11 @@ Stripe::SetFinished(bool state)
 {
     std::unique_lock<std::mutex> lock(flushIoUpdate);
     finished = state;
+
+    assert(revMapPack != nullptr);
+    delete revMapPack;
     revMapPack = nullptr;
+
     if (flushIo != nullptr)
     {
         flushIo->DecreaseStripeCnt();

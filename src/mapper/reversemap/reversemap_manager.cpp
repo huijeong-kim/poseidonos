@@ -53,7 +53,6 @@ ReverseMapManager::ReverseMapManager(IVSAMap* ivsaMap, IStripeMap* istripeMap, I
 : numMpagesPerStripe(0),
   fileSizePerStripe(0),
   fileSizeWholeRevermap(0),
-  revMapPacks(nullptr),
   revMapWholefile(nullptr),
   iVSAMap(ivsaMap),
   iStripeMap(istripeMap),
@@ -68,17 +67,17 @@ ReverseMapManager::~ReverseMapManager(void)
 {
     if (revMapWholefile != nullptr)
     {
+        if (addrInfo->IsUT() == true)
+        {
+            // TODO Move this code to test code (and inject metafile dependency in constructor)
+            revMapWholefile->Delete();
+        }
         if (revMapWholefile->IsOpened() == true)
         {
             revMapWholefile->Close();
         }
         delete revMapWholefile;
         revMapWholefile = nullptr;
-    }
-    if (revMapPacks != nullptr)
-    {
-        delete[] revMapPacks;
-        revMapPacks = nullptr;
     }
 }
 // LCOV_EXCL_STOP
@@ -125,11 +124,6 @@ ReverseMapManager::Init(void)
         }
     }
     revMapWholefile->Open();
-
-    // Make ReverseMapPack:: objects by the number of WriteBuffer stripes
-    uint32_t numWbStripes = addrInfo->GetNumWbStripes();
-    revMapPacks = new ReverseMapPack[numWbStripes](revMapWholefile, addrInfo->GetMpageSize(), numMpagesPerStripe, telemetryPublisher);
-    // revMapPacks should be used after Assign()-ed
 }
 
 void
@@ -143,11 +137,6 @@ ReverseMapManager::Dispose(void)
         }
         delete revMapWholefile;
         revMapWholefile = nullptr;
-    }
-    if (revMapPacks != nullptr)
-    {
-        delete[] revMapPacks;
-        revMapPacks = nullptr;
     }
 }
 
@@ -171,46 +160,6 @@ ReverseMapManager::Flush(ReverseMapPack* rev, EventSmartPtr cb)
     return rev->Flush(cb);
 }
 
-int
-ReverseMapManager::Flush(StripeId wblsid, EventSmartPtr cb)
-{
-    return revMapPacks[wblsid].Flush(cb);
-}
-
-int
-ReverseMapManager::UpdateReverseMapEntry(ReverseMapPack* rev, uint64_t offset, BlkAddr rba, uint32_t volumeId)
-{
-    assert(rev != nullptr);
-    return rev->SetReverseMapEntry(offset, rba, volumeId);
-}
-
-int
-ReverseMapManager::UpdateReverseMapEntry(StripeId wblsid, uint64_t offset, BlkAddr rba, uint32_t volumeId)
-{
-    assert(wblsid < addrInfo->GetNumWbStripes());
-    return revMapPacks[wblsid].SetReverseMapEntry(offset, rba, volumeId);
-}
-
-std::tuple<BlkAddr, uint32_t>
-ReverseMapManager::GetReverseMapEntry(ReverseMapPack* rev, uint64_t offset)
-{
-    assert(rev != nullptr);
-    return rev->GetReverseMapEntry(offset);
-}
-
-std::tuple<BlkAddr, uint32_t>
-ReverseMapManager::GetReverseMapEntry(StripeId wblsid, uint64_t offset)
-{
-    assert(wblsid < addrInfo->GetNumWbStripes());
-    return revMapPacks[wblsid].GetReverseMapEntry(offset);
-}
-
-void
-ReverseMapManager::Assign(StripeId wblsid, StripeId vsid)
-{
-    revMapPacks[wblsid].Assign(wblsid, vsid, _GetFileOffset(vsid));
-}
-
 ReverseMapPack*
 ReverseMapManager::AllocReverseMapPack(StripeId vsid, StripeId wblsid)
 {
@@ -232,7 +181,7 @@ ReverseMapManager::GetWholeReverseMapFileSize(void)
 }
 
 int
-ReverseMapManager::ReconstructReverseMap(uint32_t volumeId, uint64_t totalRbaNum, uint32_t wblsid, uint32_t vsid, uint64_t blockCount, std::map<uint64_t, BlkAddr> revMapInfos)
+ReverseMapManager::ReconstructReverseMap(uint32_t volumeId, uint64_t totalRbaNum, uint32_t wblsid, uint32_t vsid, uint64_t blockCount, std::map<uint64_t, BlkAddr> revMapInfos, ReverseMapPack* revMapPack)
 {
     int ret = 0;
     BlkAddr lastFoundRba = UINT64_MAX;
@@ -258,7 +207,7 @@ ReverseMapManager::ReconstructReverseMap(uint32_t volumeId, uint64_t totalRbaNum
             revMapInfos.insert(make_pair(offset, foundRba));
             lastFoundRba = foundRba;
         }
-        revMapPacks[wblsid].SetReverseMapEntry(offset, revMapInfos[offset], volumeId);
+        revMapPack->SetReverseMapEntry(offset, revMapInfos[offset], volumeId);
     }
 
     POS_TRACE_INFO(EID(REVMAP_RECONSTRUCT_FOUND_RBA), "[ReconstructMap] {}/{} blocks are reconstructed for Stripe(wbLsid:{})", revMapInfos.size(), blockCount, wblsid);
@@ -266,29 +215,15 @@ ReverseMapManager::ReconstructReverseMap(uint32_t volumeId, uint64_t totalRbaNum
 }
 
 int
-ReverseMapManager::LoadReverseMapForWBT(MetaFileIntf* fileLinux, uint64_t offset, uint64_t fileSize, char* buf)
+ReverseMapManager::LoadReverseMapForWBT(uint64_t offset, uint64_t fileSize, char* buf)
 {
-    if (fileLinux == nullptr)
-    {
-        fileLinux = revMapWholefile;
-    }
-    return fileLinux->IssueIO(MetaFsIoOpcode::Read, offset, fileSize, buf);
+    return revMapWholefile->IssueIO(MetaFsIoOpcode::Read, offset, fileSize, buf);
 }
 
 int
-ReverseMapManager::StoreReverseMapForWBT(MetaFileIntf* fileLinux, uint64_t offset, uint64_t fileSize, char* buf)
+ReverseMapManager::StoreReverseMapForWBT(uint64_t offset, uint64_t fileSize, char* buf)
 {
-    if (fileLinux == nullptr)
-    {
-        fileLinux = revMapWholefile;
-    }
-    return fileLinux->IssueIO(MetaFsIoOpcode::Write, offset, fileSize, buf);
-}
-
-char*
-ReverseMapManager::GetReverseMapPtrForWBT(void)
-{
-    return revMapPacks[0].GetRevMapPtrForWBT();
+    return revMapWholefile->IssueIO(MetaFsIoOpcode::Write, offset, fileSize, buf);
 }
 
 bool
@@ -335,12 +270,7 @@ ReverseMapManager::_FindRba(uint32_t volumeId, uint64_t totalRbaNum, StripeId vs
 void
 ReverseMapManager::WaitAllPendingIoDone(void)
 {
-    uint32_t numWbStripes = addrInfo->GetNumWbStripes();
-    POS_TRACE_INFO(EID(MAP_FLUSH_COMPLETED), "[Mapper ReverseMapMAnager] Wait For Pending IO");
-    for (StripeId wbLsid = 0; wbLsid < numWbStripes; ++wbLsid)
-    {
-        revMapPacks[wbLsid].WaitPendingIoDone();
-    }
+    // TODO
 }
 
 int

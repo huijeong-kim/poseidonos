@@ -59,23 +59,15 @@ public:
     virtual void Dispose(void);
     virtual int Load(ReverseMapPack* rev, EventSmartPtr cb);
     virtual int Flush(ReverseMapPack* rev, EventSmartPtr cb);
-    virtual int Flush(StripeId wblsid, EventSmartPtr cb);
-
-    virtual int UpdateReverseMapEntry(ReverseMapPack* rev, uint64_t offset, BlkAddr rba, uint32_t volumeId);
-    virtual int UpdateReverseMapEntry(StripeId wblsid, uint64_t offset, BlkAddr rba, uint32_t volumeId);
-    virtual std::tuple<BlkAddr, uint32_t> GetReverseMapEntry(ReverseMapPack* rev, uint64_t offset);
-    virtual std::tuple<BlkAddr, uint32_t> GetReverseMapEntry(StripeId wblsid, uint64_t offset);
-    virtual void Assign(StripeId wblsid, StripeId vsid);
     virtual ReverseMapPack* AllocReverseMapPack(StripeId vsid, StripeId wblsid);
-    virtual int ReconstructReverseMap(uint32_t volumeId, uint64_t totalRba, uint32_t wblsid, uint32_t vsid, uint64_t blockCount, std::map<uint64_t, BlkAddr> revMapInfos);
+    virtual int ReconstructReverseMap(uint32_t volumeId, uint64_t totalRba, uint32_t wblsid, uint32_t vsid, uint64_t blockCount, std::map<uint64_t, BlkAddr> revMapInfos, ReverseMapPack* revMapPack);
     virtual void WaitAllPendingIoDone(void);
 
     // For WBT commands
     virtual uint64_t GetReverseMapPerStripeFileSize(void);
     virtual uint64_t GetWholeReverseMapFileSize(void);
-    virtual int LoadReverseMapForWBT(MetaFileIntf* fileLinux, uint64_t offset, uint64_t fileSize, char* buf);
-    virtual int StoreReverseMapForWBT(MetaFileIntf* fileLinux, uint64_t offset, uint64_t fileSize, char* buf);
-    virtual char* GetReverseMapPtrForWBT(void);
+    virtual int LoadReverseMapForWBT(uint64_t offset, uint64_t fileSize, char* buf);
+    virtual int StoreReverseMapForWBT(uint64_t offset, uint64_t fileSize, char* buf);
 
 private:
     bool _FindRba(uint32_t volumeId, uint64_t totalRbaNum, StripeId vsid, StripeId wblsid, uint64_t offset, BlkAddr rbaStart, BlkAddr& foundRba);
@@ -86,7 +78,6 @@ private:
     uint64_t fileSizePerStripe;
     uint64_t fileSizeWholeRevermap;
 
-    ReverseMapPack* revMapPacks;
     MetaFileIntf* revMapWholefile;
 
     IVSAMap* iVSAMap;

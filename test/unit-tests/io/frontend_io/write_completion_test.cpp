@@ -11,10 +11,10 @@
 #include "test/unit-tests/io/general_io/rba_state_manager_mock.h"
 #include "test/unit-tests/event_scheduler/event_scheduler_mock.h"
 #include "test/unit-tests/mapper/i_reversemap_mock.h"
+#include "test/unit-tests/mapper/reversemap/reverse_map_mock.h"
 
 using namespace std;
 using ::testing::_;
-using ::testing::Matcher;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::ReturnRef;
@@ -83,7 +83,7 @@ TEST(WriteCompletion, _DoSpecificJob_NullStripe)
     NiceMock<MockIWBStripeAllocator> mockIWBStripeAllocator;
     NiceMock<MockRBAStateManager> mockRBAStateManager("", 0);
     StripeAddr stripeAddr;
-    Stripe stripe(nullptr, true, 1);
+    Stripe stripe(nullptr, 1);
     VirtualBlkAddr startVsa;
 
     ON_CALL(*mockVolIo, GetLsidEntry()).WillByDefault(ReturnRef(stripeAddr));
@@ -111,11 +111,14 @@ TEST(WriteCompletion, _RequestFlush_DummyStripe)
     NiceMock<MockRBAStateManager> mockRBAStateManager("", 0);
     StripeAddr stripeAddr;
     NiceMock<MockIReverseMap> rev;
-    Stripe stripe(&rev, true, 1);
+    NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>;
+    EXPECT_CALL(rev, AllocReverseMapPack).WillOnce(Return(revMapPack));
+    Stripe stripe(&rev, 1);
+    stripe.Assign(0, 0, 0, 0);
     VirtualBlkAddr startVsa;
     int arrayId = 0;
     ComponentsInfo info{&mockIArrayInfo, nullptr};
-    ON_CALL(rev, Flush(Matcher<StripeId>(_), _)).WillByDefault(Return(0));
+    ON_CALL(rev, Flush).WillByDefault(Return(0));
     ON_CALL(*mockVolIo, GetLsidEntry()).WillByDefault(ReturnRef(stripeAddr));
     ON_CALL(*mockVolIo, GetVsa()).WillByDefault(ReturnRef(startVsa));
     ON_CALL(mockIArrayMgmt, GetInfo(arrayId)).WillByDefault(Return(&info));
@@ -176,7 +179,7 @@ TEST(WriteCompletion, _RequestFlush_FlushError)
     NiceMock<MockRBAStateManager> mockRBAStateManager("", 0);
     NiceMock<MockStripe> mockStripe;
     StripeAddr stripeAddr;
-    Stripe stripe(nullptr, true, 1);
+    Stripe stripe(nullptr, 1);
     VirtualBlkAddr startVsa;
     StripeId stripeId = 1;
     int arrayId = 0;

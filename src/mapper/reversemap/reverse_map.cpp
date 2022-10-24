@@ -59,8 +59,8 @@ RevMapPageAsyncIoCtx::HandleIoComplete(void* data)
 ReverseMapPack::ReverseMapPack(MetaFileIntf* file, uint32_t mpageSize_, uint32_t numMpagesPerStripe_, TelemetryPublisher* tp)
 : wbLsid(UNMAP_STRIPE),
   vsid(UINT32_MAX),
-  fileOffset(UINT64_MAX),
   revMapfile(file),
+  fileOffset(UINT64_MAX),
   mpageSize(mpageSize_),
   mfsAsyncIoDonePages(0),
   mapFlushState(MapFlushState::FLUSH_DONE),
