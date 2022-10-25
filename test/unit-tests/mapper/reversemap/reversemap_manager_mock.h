@@ -18,11 +18,11 @@ public:
     MOCK_METHOD(int, Flush, (ReverseMapPack * rev, EventSmartPtr cb), (override));
     MOCK_METHOD(ReverseMapPack*, AllocReverseMapPack, (StripeId vsid, StripeId wblsid), (override));
     MOCK_METHOD(int, ReconstructReverseMap, (uint32_t volumeId, uint64_t totalRba, uint32_t wblsid, uint32_t vsid, uint64_t blockCount, (std::map<uint64_t, BlkAddr> revMapInfos), ReverseMapPack* revMapPack), (override));
+    MOCK_METHOD(void, WaitAllPendingIoDone, (), (override));
     MOCK_METHOD(uint64_t, GetReverseMapPerStripeFileSize, (), (override));
     MOCK_METHOD(uint64_t, GetWholeReverseMapFileSize, (), (override));
-    MOCK_METHOD(int, LoadReverseMapForWBT, (MetaFileIntf * fileLinux, uint64_t offset, uint64_t fileSize, char* buf), (override));
-    MOCK_METHOD(int, StoreReverseMapForWBT, (MetaFileIntf * fileLinux, uint64_t offset, uint64_t fileSize, char* buf), (override));
-    MOCK_METHOD(void, WaitAllPendingIoDone, (), (override));
+    MOCK_METHOD(int, LoadReverseMapForWBT, (uint64_t offset, uint64_t fileSize, char* buf), (override));
+    MOCK_METHOD(int, StoreReverseMapForWBT, (uint64_t offset, uint64_t fileSize, char* buf), (override));
 };
 
 } // namespace pos

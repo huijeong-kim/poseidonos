@@ -50,7 +50,6 @@ class Stripe
 {
 public:
     Stripe(void) = default;
-    Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, uint32_t numBlksPerStripe);
     Stripe(IReverseMap* revMapMan, uint32_t numBlksPerStripe);
     virtual ~Stripe(void);
     virtual bool Assign(StripeId vsid, StripeId wbLsid, StripeId userLsid, uint32_t volumeId);
@@ -70,7 +69,7 @@ public:
     virtual VirtualBlkAddr GetVictimVsa(uint32_t offset);
 
     virtual bool IsFinished(void);
-    virtual void SetFinished(bool state);
+    virtual void SetFinished(void);
 
     virtual uint32_t GetBlksRemaining(void);
     virtual uint32_t DecreseBlksRemaining(uint32_t amount);

@@ -21,7 +21,7 @@ public:
     MOCK_METHOD(void, UpdateVictimVsa, (uint32_t offset, VirtualBlkAddr vsa), (override));
     MOCK_METHOD(VirtualBlkAddr, GetVictimVsa, (uint32_t offset), (override));
     MOCK_METHOD(bool, IsFinished, (), (override));
-    MOCK_METHOD(void, SetFinished, (bool state), (override));
+    MOCK_METHOD(void, SetFinished, (), (override));
     MOCK_METHOD(uint32_t, GetBlksRemaining, (), (override));
     MOCK_METHOD(uint32_t, DecreseBlksRemaining, (uint32_t amount), (override));
     MOCK_METHOD(void, Refer, (), (override));

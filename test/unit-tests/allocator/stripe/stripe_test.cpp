@@ -92,7 +92,7 @@ TEST(Stripe, Flush_TestwithRevMapPack)
     NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>();
     EXPECT_CALL(revMap, AllocReverseMapPack).WillOnce(Return(revMapPack));
     Stripe stripe(&revMap, 10);
-    EXPECT_CALL(*revMapPack, Flush).Times(1);
+    EXPECT_CALL(revMap, Flush(revMapPack, _)).Times(1);
     // when
     stripe.Assign(10, 20, 10, 0);
     stripe.Flush(nullptr);
@@ -117,31 +117,21 @@ TEST(Stripe, IsFinished_TestSimpleGetter)
 {
     // given
     NiceMock<MockReverseMapManager>* revMap = new NiceMock<MockReverseMapManager>();
-    Stripe stripe(revMap, 10);
-    // given 1.
-    stripe.SetFinished(true);
-    // when 1.
-    bool ret = stripe.IsFinished();
-    // then 1.
-    EXPECT_EQ(true, ret);
-    // given 2.
-    stripe.SetFinished(false);
-    // when 2.
-    ret = stripe.IsFinished();
-    // then 2.
-    EXPECT_EQ(false, ret);
-    delete revMap;
-}
+    NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>();
 
-TEST(Stripe, SetFinished_TestSimpleSetter)
-{
+    EXPECT_CALL(*revMap, AllocReverseMapPack).WillOnce(Return(revMapPack));
+
+    Stripe stripe(revMap, 10);
+    stripe.Assign(10, 20, 10, 0);
+
     // given
-    Stripe stripe(nullptr, 10);
+    stripe.SetFinished();
     // when
-    stripe.SetFinished(true);
-    // then
     bool ret = stripe.IsFinished();
+    // then
     EXPECT_EQ(true, ret);
+
+    delete revMap;
 }
 
 TEST(Stripe, GetBlksRemaining_TestSimpleGetter)
@@ -255,11 +245,16 @@ TEST(Stripe, GetVictimVsa_TestSimpleGetter)
 
 TEST(Stripe, UpdateFlushIo_TestSimple)
 {
-    NiceMock<MockReverseMapManager>* revMap = new NiceMock<MockReverseMapManager>();
-    Stripe stripe(revMap, 1);
+    NiceMock<MockReverseMapManager> revMap;
+    NiceMock<MockReverseMapPack>* revMapPack = new NiceMock<MockReverseMapPack>();
+
+    EXPECT_CALL(revMap, AllocReverseMapPack).WillRepeatedly(Return(revMapPack));
+
+    Stripe stripe(&revMap, 1);
+    stripe.Assign(10, 20, 10, 0);
 
     // When
-    stripe.SetFinished(true);
+    stripe.SetFinished();
     stripe.UpdateFlushIo(nullptr);
 }
 

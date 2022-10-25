@@ -73,10 +73,6 @@ VictimStripe::VictimStripe(IArrayInfo* array,
   revMapPack(nullptr)
 {
     dataBlks = array->GetSizeInfo(PartitionType::USER_DATA)->blksPerStripe;
-    if (iReverseMap != nullptr)
-    {
-        revMapPack = iReverseMap->AllocReverseMapPack(myLsid, UNMAP_STRIPE);
-    }
 }
 
 VictimStripe::~VictimStripe(void)
@@ -108,6 +104,11 @@ VictimStripe::_InitValue(StripeId _lsid)
     blockOffset = 0;
     validBlockCnt = 0;
     isLoaded = false;
+
+    if (iReverseMap != nullptr)
+    {
+        revMapPack = iReverseMap->AllocReverseMapPack(myLsid, UNMAP_STRIPE);
+    }
 }
 
 void

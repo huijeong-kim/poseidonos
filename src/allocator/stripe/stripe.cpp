@@ -45,24 +45,18 @@
 
 namespace pos
 {
-Stripe::Stripe(ReverseMapPack* rev, IReverseMap* revMapMan, uint32_t numBlksPerStripe)
+Stripe::Stripe(IReverseMap* revMapMan, uint32_t numBlksPerStripe)
 : volumeId(UINT32_MAX),
   vsid(UINT32_MAX),
   wbLsid(UINT32_MAX),
   userLsid(UINT32_MAX),
-  revMapPack(rev),
+  revMapPack(nullptr),
   finished(true),
   remaining(0),
   referenceCount(0),
   totalBlksPerUserStripe(numBlksPerStripe), // for UT
   iReverseMap(revMapMan),
   activeFlush(false)
-{
-    flushIo = nullptr;
-}
-
-Stripe::Stripe(IReverseMap* revMapMan, uint32_t numBlksPerStripe)
-: Stripe(nullptr, revMapMan, numBlksPerStripe)
 {
 }
 // LCOV_EXCL_START
@@ -225,10 +219,11 @@ Stripe::IsFinished(void)
 }
 
 void
-Stripe::SetFinished(bool state)
+Stripe::SetFinished(void)
 {
     std::unique_lock<std::mutex> lock(flushIoUpdate);
-    finished = state;
+    assert(finished == false);
+    finished = true;
 
     assert(revMapPack != nullptr);
     delete revMapPack;

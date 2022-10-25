@@ -46,6 +46,7 @@
 #include "src/metafs/include/metafs_service.h"
 #include "src/metafs/config/metafs_config_manager.h"
 #include "src/meta_file_intf/rocksdb_metafs_intf.h"
+#include "src/mapper/reversemap/reverse_map_io.h"
 
 namespace pos
 {
@@ -150,21 +151,43 @@ int
 ReverseMapManager::Load(ReverseMapPack* rev, EventSmartPtr cb)
 {
     assert(rev != nullptr);
-    return rev->Load(cb);
+    ReverseMapIo* reverseMapLoadContext = _CreateIoContext(rev, cb, IoDirection::IO_LOAD);
+    return reverseMapLoadContext->Load();
 }
 
 int
 ReverseMapManager::Flush(ReverseMapPack* rev, EventSmartPtr cb)
 {
     assert(rev != nullptr);
-    return rev->Flush(cb);
+    ReverseMapIo* reverseMapFlushContext = _CreateIoContext(rev, cb, IoDirection::IO_FLUSH);
+
+    POS_TRACE_DEBUG(9999, "Flush revmap, vsid {}", rev->GetVsid());
+
+    return reverseMapFlushContext->Flush();
+}
+
+ReverseMapIo* 
+ReverseMapManager::_CreateIoContext(ReverseMapPack* rev, EventSmartPtr cb, IoDirection direction)
+{
+    StripeId vsid = rev->GetVsid();
+
+    return new ReverseMapIo(rev, cb,
+        revMapWholefile, _GetFileOffset(vsid), direction, telemetryPublisher,
+        EventSchedulerSingleton::Instance(),
+        std::bind(&ReverseMapManager::_ReverseMapIoDone, this, std::placeholders::_1));
+}
+
+void
+ReverseMapManager::_ReverseMapIoDone(ReverseMapIo* reverseMapIo)
+{
+    delete reverseMapIo;
 }
 
 ReverseMapPack*
 ReverseMapManager::AllocReverseMapPack(StripeId vsid, StripeId wblsid)
 {
-    ReverseMapPack* revPack = new ReverseMapPack(revMapWholefile, addrInfo->GetMpageSize(), numMpagesPerStripe, telemetryPublisher);
-    revPack->Assign(wblsid, vsid, _GetFileOffset(vsid));
+    ReverseMapPack* revPack = new ReverseMapPack(vsid, wblsid,
+        addrInfo->GetMpageSize(), numMpagesPerStripe);
     return revPack;
 }
 

@@ -3280,7 +3280,7 @@ Root:
     Solution:
   -
     Id: 3118
-    Name: REVMAP_NOT_LINKED_PACK
+    Name: REVMAP_RESERVED
     Severity:
     Message:
     Cause:
@@ -3308,7 +3308,7 @@ Root:
     Solution:
   -
     Id: 3122
-    Name: REVMAP_MFS_IO_ERROR
+    Name: REVMAP_IO_ERROR
     Severity:
     Message:
     Cause:

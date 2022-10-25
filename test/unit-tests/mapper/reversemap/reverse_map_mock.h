@@ -26,23 +26,22 @@ public:
     using RevMap::RevMap;
 };
 
-class MockRevMapPageAsyncIoCtx : public RevMapPageAsyncIoCtx
+class MockReverseMapPage : public ReverseMapPage
 {
 public:
-    using RevMapPageAsyncIoCtx::RevMapPageAsyncIoCtx;
+    using ReverseMapPage::ReverseMapPage;
 };
 
 class MockReverseMapPack : public ReverseMapPack
 {
 public:
     using ReverseMapPack::ReverseMapPack;
-    MOCK_METHOD(void, Assign, (StripeId wbLsid, StripeId vsid, uint64_t fileOffset), (override));
-    MOCK_METHOD(int, Load, (EventSmartPtr cb), (override));
-    MOCK_METHOD(int, Flush, (EventSmartPtr cb), (override));
     MOCK_METHOD(int, SetReverseMapEntry, (uint64_t offset, BlkAddr rba, uint32_t volumeId), (override));
     MOCK_METHOD((std::tuple<BlkAddr, uint32_t>), GetReverseMapEntry, (uint64_t offset), (override));
+    MOCK_METHOD(std::vector<ReverseMapPage>, GetReverseMapPages, (), (override));
+    MOCK_METHOD(int, HeaderLoaded, (), (override));
     MOCK_METHOD(char*, GetRevMapPtrForWBT, (), (override));
-    MOCK_METHOD(void, WaitPendingIoDone, (), (override));
+    MOCK_METHOD(StripeId, GetVsid, (), (override));
 };
 
 } // namespace pos

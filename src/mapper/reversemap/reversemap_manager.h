@@ -41,6 +41,7 @@
 #include "src/mapper/i_stripemap.h"
 #include "src/mapper/i_vsamap.h"
 #include "src/mapper/reversemap/reverse_map.h"
+#include "src/mapper/reversemap/reverse_map_io.h"
 #include "src/meta_file_intf/meta_file_include.h"
 #include "src/volume/i_volume_info_manager.h"
 
@@ -73,10 +74,14 @@ private:
     bool _FindRba(uint32_t volumeId, uint64_t totalRbaNum, StripeId vsid, StripeId wblsid, uint64_t offset, BlkAddr rbaStart, BlkAddr& foundRba);
     int _SetNumMpages(void);
     uint64_t _GetFileOffset(StripeId vsid);
+    ReverseMapIo* _CreateIoContext(ReverseMapPack* rev, EventSmartPtr cb, IoDirection dir);
+    void _ReverseMapIoDone(ReverseMapIo* reverseMapIo);
 
     uint64_t numMpagesPerStripe; // It depends on block count per a stripe
     uint64_t fileSizePerStripe;
     uint64_t fileSizeWholeRevermap;
+
+    std::vector<ReverseMapIoPtr> outstandingIos;
 
     MetaFileIntf* revMapWholefile;
 

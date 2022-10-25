@@ -74,12 +74,6 @@ enum class ACTION
     CLOSE,
 };
 
-enum IoDirection
-{
-    IO_FLUSH = 1,
-    IO_LOAD,
-};
-
 struct RevMapEntry
 {
     union
@@ -129,12 +123,11 @@ struct RevMap
     RevMapSector sector[NUM_SECTOR_ENTRIES];
 };
 
-class RevMapPageAsyncIoCtx : public AsyncMetaFileIoCtx
+struct ReverseMapPage
 {
-public:
-    void HandleIoComplete(void* data) override;
-
-    int mpageNum;
+    uint64_t pageNum;
+    uint64_t length;
+    char* buffer;
 };
 
 class ReverseMapPack
@@ -143,41 +136,34 @@ class ReverseMapPack
 
 public:
     ReverseMapPack(void) = default;
-    ReverseMapPack(MetaFileIntf* file, uint32_t mpageSize_, uint32_t numMpagesPerStripe_, TelemetryPublisher* tp);
+    ReverseMapPack(StripeId vsid_, StripeId wbLsid_, uint32_t mpageSize_, uint32_t numMpagesPerStripe_);
     virtual ~ReverseMapPack(void);
-
-    virtual void Assign(StripeId wbLsid, StripeId vsid, uint64_t fileOffset);
-
-    virtual int Load(EventSmartPtr cb);
-    virtual int Flush(EventSmartPtr cb);
 
     virtual int SetReverseMapEntry(uint64_t offset, BlkAddr rba, uint32_t volumeId);
     virtual std::tuple<BlkAddr, uint32_t> GetReverseMapEntry(uint64_t offset);
+    
+    virtual std::vector<ReverseMapPage> GetReverseMapPages(void);
+    virtual int HeaderLoaded(void);
+
     virtual char* GetRevMapPtrForWBT(void) { return reinterpret_cast<char*>(&revMaps[0]->sector[0]); }
-    virtual void WaitPendingIoDone(void);
+
+    virtual StripeId GetVsid(void)
+    {
+        return vsid;
+    }
 
 private:
     void _InitRevMaps(void);
     void _SetHeader(StripeId wblsid, StripeId vsid);
     std::tuple<uint32_t, uint32_t, uint32_t> _ReverseMapGeometry(uint64_t offset);
-    void _RevMapPageIoDone(AsyncMetaFileIoCtx* ctx);
 
-    StripeId wbLsid;
     StripeId vsid;   // SSD LSID
-    std::vector<RevMap*> revMaps;
-
-    MetaFileIntf* revMapfile; // MFS file
-    uint64_t fileOffset;
-
+    StripeId wbLsid;
+    
     uint32_t mpageSize;
-    std::atomic<uint32_t> mfsAsyncIoDonePages;
-    std::atomic<MapFlushState> mapFlushState;
     uint64_t numMpagesPerStripe; // It depends on block count per a stripe
-    int ioError; // indicates if there is an Async-IO error among mpages
-    int ioDirection;
-    EventSmartPtr callback;
-    TelemetryPublisher* telemetryPublisher;
-    std::atomic<uint64_t> issuedIoCnt;
+
+    std::vector<RevMap*> revMaps;    
 };
 
 } // namespace pos
