@@ -215,6 +215,26 @@ SegmentInfo::MoveToSsdStateOrFreeStateIfItBecomesEmpty(void)
 }
 
 bool
+SegmentInfo::MoveVictimToFree(void)
+{
+    std::lock_guard<std::mutex> lock(seglock);
+
+    if (state == SegmentState::VICTIM && validBlockCount == 0)
+    {
+        _MoveToFreeState();
+
+        return true;
+    }
+    else
+    {
+        POS_TRACE_INFO(EID(ALLOCATOR_SEGINFO_MOVE_TO_SSD_OR_FREE),
+            "segment_id: {}, prev_state: {}, next_state: {}, valid_block_count: {}, array_id: {}",
+            segmentId, ToSegmentStateString(state), ToSegmentStateString(SegmentState::VICTIM), validBlockCount, arrayId);
+        return false;
+    }
+}
+
+bool
 SegmentInfo::MoveToVictimState(void)
 {
     std::lock_guard<std::mutex> lock(seglock);

@@ -327,7 +327,7 @@ Copier::_CleanUpVictimSegments(void)
             // Push to free list among the victim lists
             {
                 // We are intentionally scoping segCtxLock to the current code block
-                std::lock_guard<mutex> segCtxLock( segmentCtx->GetCtxLock() );
+                //std::lock_guard<mutex> segCtxLock( segmentCtx->GetCtxLock() );
                 segmentCtx->MoveToFreeState(victimSegId);
             }
 

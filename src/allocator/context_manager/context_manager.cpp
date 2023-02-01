@@ -155,7 +155,7 @@ ContextManager::AllocateFreeSegment(void)
 {
     // TODO(huijeong.kim) to reduce critical section
     std::lock_guard<std::mutex> lock(ctxLock);
-    std::lock_guard<std::mutex> segCtxLock(segmentCtx->GetCtxLock());
+    //std::lock_guard<std::mutex> segCtxLock(segmentCtx->GetCtxLock());
 
     // the proper lock ordering: 1) ContextManager::ctxLock, and then 2) SegmentCtx:segCtxLock
     // This ordering must be kept across the entire code path

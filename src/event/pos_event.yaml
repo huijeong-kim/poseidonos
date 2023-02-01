@@ -4202,6 +4202,14 @@ Root:
     Message: Segment state has been set to VICTIM
     Cause:
     Solution:
+
+  -
+    Id: 3228
+    Name: ALLOCATOR_SEGINFO_MOVE_VICTIM_TO_FREE_FAILED
+    Severity: INFO
+    Message: Segment state change failed
+    Cause:
+    Solution:
     # Metadata: 3300 - 3399
   -
     Id: 3300

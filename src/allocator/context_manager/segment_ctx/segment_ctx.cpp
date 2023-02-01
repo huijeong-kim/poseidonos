@@ -182,28 +182,18 @@ SegmentCtx::Dispose(void)
 void
 SegmentCtx::MoveToFreeState(SegmentId segId)
 {
-    bool removed = segmentList[SegmentState::VICTIM]->RemoveFromList(segId);
-
-    if (true == removed)
+    bool segmentFreed = segmentInfos[segId].MoveVictimToFree();
+    if (segmentFreed == true)
     {
-        bool segmentFreed = segmentInfos[segId].MoveToSsdStateOrFreeStateIfItBecomesEmpty();
-        if (segmentFreed == true)
-        {
-            POS_TRACE_DEBUG(EID(ALLOCATOR_COPIER_FREE_SEGMENT_SUCCESS),
+        bool removed = segmentList[SegmentState::VICTIM]->RemoveFromList(segId);
+        POS_TRACE_DEBUG(EID(ALLOCATOR_COPIER_FREE_SEGMENT_SUCCESS),
             "segment_id:{}, is_removed_from_victim_segment_list:{}", segId, removed);
-            _SegmentFreed(segId);
-        }
-        else
-        {
-            POS_TRACE_CRITICAL(EID(ALLOCATOR_SEGMENT_REMOVAL_FAILURE_VALID_COUNT_NOT_ZERO),
-            "segment_id: {}", segId);
-            assert(false);
-        }
+        _SegmentFreed(segId);
     }
     else
     {
         POS_TRACE_DEBUG(EID(ALLOCATOR_SEGMENT_REMOVAL_FAILURE_ALREADY_FREE_SEGMENT),
-            "segment_id: {}, is_removed_from_victim_segment_list: {}", segId, removed);
+            "segment_id: {}, state: {}", segId, segmentInfos[segId].GetState());
     }
 }
 
@@ -541,6 +531,7 @@ SegmentCtx::_SetVictimSegment(SegmentId victimSegment)
         }
         else
         {
+            segmentList[SegmentState::SSD]->RemoveFromList(victimSegment);
             segmentList[SegmentState::VICTIM]->AddToList(victimSegment);
         }
 

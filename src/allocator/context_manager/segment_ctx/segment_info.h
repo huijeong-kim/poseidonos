@@ -77,6 +77,7 @@ public:
     virtual void MoveToNvramState(void);
     virtual bool MoveToSsdStateOrFreeStateIfItBecomesEmpty(void);
     virtual bool MoveToVictimState(void);
+    virtual bool MoveVictimToFree(void);
 
     virtual uint32_t GetValidBlockCountIfSsdState(void);
     static std::string ToSegmentStateString(SegmentState state);
